@@ -16,7 +16,7 @@ The Indonesian guides in `docs/` are copied as-is from the Google Drive folder "
 
 ## Toolbench website
 
-`site/index.html` is a one-page website with eight of these tools, rebuilt from scratch:
+`site/index.html` is a one-page website with nine of these tools, rebuilt from scratch:
 
 | Tool | Needs |
 | --- | --- |
@@ -27,6 +27,7 @@ The Indonesian guides in `docs/` are copied as-is from the Google Drive folder "
 | Placeholder image (PNG, JPG, WebP, SVG) | Browser only |
 | Text to PDF (A4 / A5, sections, page numbers) | Browser only |
 | Page lock (password-protected HTML, AES-256-GCM) | Browser only |
+| Cut-out layers (split a picture into separate PNG pieces, ZIP with positions) | Browser only; removes plain backgrounds by color, not AI, and makes no Alight Motion XML |
 | Prompt writer (image and video prompts) | An AI model: works when the page is opened on claude.ai, using the viewer's Claude account |
 
 To use it, open `site/index.html` in a browser, or host the `site` folder on any static host such as GitHub Pages. It loads two libraries from jsDelivr (`qrcode-generator` 1.4.4 and `jspdf` 2.5.1) and its fonts from Google Fonts; nothing else leaves the browser.

@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Toolbench</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="Everyday tools that run in your browser: passwords, QR codes, Morse code, quote images, placeholders, text to PDF, page lock, and an AI prompt writer.">
+<meta name="description" content="Everyday tools that run in your browser: passwords, QR codes, Morse code, quote images, placeholders, text to PDF, page lock, cut-out layers, and an AI prompt writer.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500&family=Space+Grotesk:wght@500;600;700&display=swap">
@@ -292,6 +292,17 @@ details.ref summary { cursor: pointer; font-weight: 600; font-size: 13.5px; }
 .prompt-text { white-space: pre-wrap; font-size: 15px; line-height: 1.6; }
 .out-label { font-weight: 600; font-size: 13px; margin-bottom: -6px; }
 
+/* Cut-out layers */
+.swatch { width: 18px; height: 18px; border-radius: 5px; border: 1px solid var(--line); flex: none; display: inline-block; }
+.cu-stage { padding: 10px; min-height: 240px; }
+#cu-view { display: block; width: 100%; height: auto; cursor: crosshair; touch-action: auto; }
+.pieces { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 320px; overflow: auto; }
+.piece { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+.piece input[type="text"] { flex: 1 1 110px; width: auto; padding: 6px 8px; font-size: 14px; }
+.piece .meta { flex: none; }
+.icon-btn { font: 600 13px/1 var(--font-body); padding: 6px 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 6px; cursor: pointer; }
+.icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
 /* Toast */
 .toast {
   position: fixed;
@@ -348,10 +359,11 @@ details.ref summary { cursor: pointer; font-weight: 600; font-size: 13.5px; }
       <a href="#placeholder" data-tool="placeholder">Placeholder image<small>PNG · JPG · WebP · SVG</small></a>
       <a href="#pdf" data-tool="pdf">Text to PDF<small>A4 · A5 · sections</small></a>
       <a href="#lock" data-tool="lock">Page lock<small>AES-256 · passphrase</small></a>
+      <a href="#cutout" data-tool="cutout">Cut-out layers<small>PNG pieces · ZIP</small></a>
       <p class="rack-label">Uses AI <span class="ai-tag">AI</span></p>
       <a href="#prompt" data-tool="prompt">Prompt writer<small>image · video prompts</small></a>
     </nav>
-    <p class="rack-foot">The first seven tools work offline once the page has loaded, and nothing you type in them is uploaded. Prompt writer sends your idea to Claude.</p>
+    <p class="rack-foot">Every tool except Prompt writer works offline once the page has loaded, and nothing you type or open in them leaves your device. Prompt writer sends your idea to Claude.</p>
   </aside>
 
   <main>
@@ -762,6 +774,98 @@ details.ref summary { cursor: pointer; font-weight: 600; font-size: 13.5px; }
       </div>
     </section>
 
+    <!-- Cut-out layers -->
+    <section class="tool" data-tool="cutout" aria-labelledby="h-cutout" hidden>
+      <header class="tool-head">
+        <p class="eyebrow">Runs in your browser</p>
+        <h1 id="h-cutout">Cut-out layers</h1>
+        <p class="lede">Split a character or object into separate transparent PNGs, one per piece, ready to animate in Alight Motion or any editor with layers. Parts that don't touch become separate pieces. Draw a cut line to split parts that do.</p>
+      </header>
+      <div class="bench">
+        <div class="panel" id="cu-form">
+          <div class="field">
+            <label for="cu-file">Picture</label>
+            <input type="file" id="cu-file" accept="image/png,image/jpeg,image/webp">
+            <p class="hint" id="cu-file-hint">Showing a sample character. Choose a PNG, JPG or WebP up to 20 MB, or drop one on the preview.</p>
+          </div>
+          <fieldset class="seg">
+            <legend>1 · Background</legend>
+            <div class="seg-opts">
+              <label><input type="radio" name="cu-bg" id="cu-bg-remove" value="remove" checked><span>Remove a plain background</span></label>
+              <label><input type="radio" name="cu-bg" id="cu-bg-keep" value="keep"><span>Already transparent</span></label>
+            </div>
+          </fieldset>
+          <div id="cu-bg-options" class="grid-2">
+            <div class="field">
+              <span class="label">Background color</span>
+              <div class="color-field"><span class="swatch" id="cu-bg-swatch"></span><span class="meta" id="cu-bg-hex"></span><button type="button" class="link-btn" id="cu-pick">Pick from picture</button></div>
+            </div>
+            <div class="field">
+              <div class="label-row"><label for="cu-tol">Tolerance</label><output id="cu-tol-out" for="cu-tol">28</output></div>
+              <input type="range" id="cu-tol" min="0" max="100" value="28">
+            </div>
+          </div>
+          <div class="checks" id="cu-bg-checks">
+            <label class="check"><input type="checkbox" id="cu-global"> Also remove this color inside the shape, such as gaps between arm and body</label>
+            <label class="check"><input type="checkbox" id="cu-smooth" checked> Smooth edges</label>
+          </div>
+          <p class="hint" id="cu-bg-hint">This works on flat backgrounds like studio white or a solid color. If part of the subject disappears because it's close to the background color, lower the tolerance. Busy photo backgrounds need an AI cut-out tool first; bring the transparent PNG here.</p>
+          <fieldset class="seg">
+            <legend>2 · Fix by hand</legend>
+            <div class="seg-opts">
+              <label><input type="radio" name="cu-tool" id="cu-tool-view" value="view" checked><span>Look</span></label>
+              <label><input type="radio" name="cu-tool" id="cu-tool-erase" value="erase"><span>Erase</span></label>
+              <label><input type="radio" name="cu-tool" id="cu-tool-restore" value="restore"><span>Restore</span></label>
+              <label><input type="radio" name="cu-tool" id="cu-tool-cut" value="cut"><span>Cut line</span></label>
+            </div>
+          </fieldset>
+          <div class="field">
+            <div class="label-row"><label for="cu-brush">Brush size</label><output id="cu-brush-out" for="cu-brush">24 px</output></div>
+            <input type="range" id="cu-brush" min="4" max="120" value="24">
+          </div>
+          <div class="row">
+            <button type="button" class="btn secondary" id="cu-undo" disabled>Undo</button>
+            <button type="button" class="btn secondary" id="cu-clear" disabled>Clear hand edits</button>
+          </div>
+          <div class="field">
+            <div class="label-row"><label for="cu-min">3 · Ignore bits smaller than</label><output id="cu-min-out" for="cu-min"></output></div>
+            <input type="range" id="cu-min" min="0" max="40" value="5">
+            <p class="hint">A share of the picture. Raise it if specks of dust or stray pixels show up as pieces.</p>
+          </div>
+        </div>
+        <div class="tray">
+          <div class="row between">
+            <p class="tray-title">Preview</p>
+            <div class="seg-opts" role="radiogroup" aria-label="Preview shows">
+              <label><input type="radio" name="cu-show" id="cu-show-pieces" value="pieces" checked><span>Pieces</span></label>
+              <label><input type="radio" name="cu-show" id="cu-show-result" value="result"><span>Result</span></label>
+              <label><input type="radio" name="cu-show" id="cu-show-original" value="original"><span>Original</span></label>
+            </div>
+          </div>
+          <div class="stage checker cu-stage" id="cu-stage"><canvas id="cu-view" width="900" height="900" aria-label="Cut-out preview. With Erase, Restore or Cut line chosen, drag on it to edit."></canvas></div>
+          <p class="meta" id="cu-info"></p>
+          <ul class="notes" id="cu-notes"></ul>
+          <div class="field">
+            <span class="label">Pieces, front to back</span>
+            <ol class="pieces" id="cu-pieces"></ol>
+            <p class="hint">Names become file names. Untick a piece to leave it out. Merge joins a piece to the one above it.</p>
+          </div>
+          <fieldset class="seg">
+            <legend>Each PNG is</legend>
+            <div class="seg-opts">
+              <label><input type="radio" name="cu-size" id="cu-size-full" value="full" checked><span>Full picture size</span></label>
+              <label><input type="radio" name="cu-size" id="cu-size-crop" value="crop"><span>Cropped to the piece</span></label>
+            </div>
+          </fieldset>
+          <div class="row">
+            <button type="button" class="btn" id="cu-zip">Download ZIP</button>
+            <button type="button" class="btn secondary" id="cu-png">Download as one PNG</button>
+          </div>
+          <p class="hint">The ZIP has one PNG per piece, numbered from the back, plus layers.json with each piece's position and a short how-to. Full-size PNGs line up when stacked. There's no Alight Motion XML in it yet, so add the PNGs as image layers yourself.</p>
+        </div>
+      </div>
+    </section>
+
     <!-- Prompt writer -->
     <section class="tool" data-tool="prompt" aria-labelledby="h-prompt" hidden>
       <header class="tool-head">
@@ -910,7 +1014,7 @@ details.ref summary { cursor: pointer; font-weight: 600; font-size: 13.5px; }
   const debounce = (fn, ms) => { let t = 0; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 
   /* ---------- Router ---------- */
-  const TOOLS = ["password", "qr", "morse", "quote", "placeholder", "pdf", "lock", "prompt"];
+  const TOOLS = ["password", "qr", "morse", "quote", "placeholder", "pdf", "lock", "cutout", "prompt"];
   const onShow = {};
   function route() {
     const id = location.hash.replace(/^#/, "");
@@ -1996,6 +2100,608 @@ form{display:grid;gap:10px}#e{min-height:1.5em;font-size:14px}
     $("#ul-download").addEventListener("click", () => { if (unlockedHtml) saveFile(unlockedName, new Blob([unlockedHtml], { type: "text/html" })); });
     passCheck();
     setMode("lock");
+  })();
+
+  /* ---------- Cut-out layers ---------- */
+  (function cutoutTool() {
+    const MAX_SIDE = 2048, ALPHA_MIN = 24, MAX_PIECES = 40, ID_SPAN = 8388608;
+    const PALETTE = [[230, 25, 75], [60, 180, 75], [67, 99, 216], [245, 130, 49], [145, 30, 180], [66, 212, 244],
+      [240, 50, 230], [150, 200, 40], [70, 153, 144], [154, 99, 36], [128, 0, 0], [0, 0, 117]];
+    const view = $("#cu-view"), stage = $("#cu-stage"), info = $("#cu-info"), notes = $("#cu-notes"), list = $("#cu-pieces");
+    const editCanvas = document.createElement("canvas");
+    let editCtx = null;
+    let W = 0, H = 0, src = null, bg = [255, 255, 255], alpha = null, labels = null, comps = new Map();
+    let pieces = [], pieceSeq = 0, strokes = [], active = null, picking = false;
+    let sourceName = "picture", scaledFrom = "", droppedCount = 0, cappedCount = 0;
+    const hex = c => "#" + c.map(v => v.toString(16).padStart(2, "0")).join("");
+    const utf8 = s => new TextEncoder().encode(s);
+
+    function roundRectPath(g, x, y, w, h, r) {
+      r = Math.min(r, w / 2, h / 2);
+      g.beginPath();
+      g.moveTo(x + r, y);
+      g.arcTo(x + w, y, x + w, y + h, r);
+      g.arcTo(x + w, y + h, x, y + h, r);
+      g.arcTo(x, y + h, x, y, r);
+      g.arcTo(x, y, x + w, y, r);
+      g.closePath();
+    }
+    function sampleCharacter() {
+      const c = document.createElement("canvas");
+      c.width = 900;
+      c.height = 900;
+      const g = c.getContext("2d");
+      const box = (x, y, w, h, r, fill) => { g.fillStyle = fill; roundRectPath(g, x, y, w, h, r); g.fill(); };
+      const navy = "#26324a", orange = "#f08a24";
+      g.fillStyle = "#eef3f8";
+      g.fillRect(0, 0, 900, 900);
+      box(370, 640, 64, 160, 26, navy);
+      box(466, 640, 64, 160, 26, navy);
+      box(342, 778, 104, 46, 23, navy);
+      box(454, 778, 104, 46, 23, navy);
+      box(325, 380, 250, 250, 60, orange);
+      box(385, 450, 130, 92, 20, "#ffd7a8");
+      g.save(); g.translate(290, 400); g.rotate(0.35); box(-30, 0, 58, 190, 29, orange); g.restore();
+      g.save(); g.translate(612, 400); g.rotate(-0.35); box(-28, 0, 58, 190, 29, orange); g.restore();
+      g.strokeStyle = navy; g.lineWidth = 10;
+      g.beginPath(); g.moveTo(450, 140); g.lineTo(450, 82); g.stroke();
+      g.fillStyle = "#4f7cff"; g.beginPath(); g.arc(450, 72, 18, 0, Math.PI * 2); g.fill();
+      g.fillStyle = "#ffcf5a"; g.beginPath(); g.arc(450, 250, 120, 0, Math.PI * 2); g.fill();
+      g.fillStyle = navy; [405, 495].forEach(x => { g.beginPath(); g.arc(x, 245, 16, 0, Math.PI * 2); g.fill(); });
+      g.fillStyle = "#ffffff"; [411, 501].forEach(x => { g.beginPath(); g.arc(x, 239, 5, 0, Math.PI * 2); g.fill(); });
+      g.strokeStyle = navy; g.lineWidth = 7; g.lineCap = "round";
+      g.beginPath(); g.arc(450, 285, 30, 0.2 * Math.PI, 0.8 * Math.PI); g.stroke();
+      return c;
+    }
+
+    function borderEach(cb) {
+      for (let x = 0; x < W; x++) { cb(x); if (H > 1) cb((H - 1) * W + x); }
+      for (let y = 1; y < H - 1; y++) { cb(y * W); if (W > 1) cb(y * W + W - 1); }
+    }
+    function transparentBorderShare() {
+      let t = 0, n = 0;
+      borderEach(i => { n++; if (src[i * 4 + 3] < 16) t++; });
+      return n ? t / n : 0;
+    }
+    function detectBackground() {
+      const bucket = p => ((src[p] >> 4) << 8) | ((src[p + 1] >> 4) << 4) | (src[p + 2] >> 4);
+      const counts = new Map();
+      borderEach(i => { const p = i * 4; if (src[p + 3] < 16) return; const k = bucket(p); counts.set(k, (counts.get(k) || 0) + 1); });
+      let best = -1, bestN = 0;
+      counts.forEach((n, k) => { if (n > bestN) { bestN = n; best = k; } });
+      if (best < 0) return [255, 255, 255];
+      let r = 0, g = 0, b = 0, n = 0;
+      borderEach(i => { const p = i * 4; if (src[p + 3] < 16 || bucket(p) !== best) return; r += src[p]; g += src[p + 1]; b += src[p + 2]; n++; });
+      return [Math.round(r / n), Math.round(g / n), Math.round(b / n)];
+    }
+
+    function computeAlpha() {
+      const n = W * H, a = new Uint8ClampedArray(n);
+      if (radio("cu-bg") === "keep") {
+        for (let i = 0; i < n; i++) a[i] = src[i * 4 + 3];
+      } else {
+        const tol = Number($("#cu-tol").value) * 2.2, tol2 = tol * tol;
+        const [br, bgg, bb] = bg;
+        const dist2 = i => { const p = i * 4, dr = src[p] - br, dg = src[p + 1] - bgg, db = src[p + 2] - bb; return dr * dr + dg * dg + db * db; };
+        const matches = i => src[i * 4 + 3] < 16 || dist2(i) <= tol2;
+        const isBg = new Uint8Array(n);
+        if ($("#cu-global").checked) {
+          for (let i = 0; i < n; i++) if (matches(i)) isBg[i] = 1;
+        } else {
+          const stack = new Int32Array(n);
+          let sp = 0;
+          const seed = i => { if (!isBg[i] && matches(i)) { isBg[i] = 1; stack[sp++] = i; } };
+          borderEach(seed);
+          while (sp) {
+            const i = stack[--sp], x = i % W;
+            if (x > 0) seed(i - 1);
+            if (x < W - 1) seed(i + 1);
+            if (i >= W) seed(i - W);
+            if (i < n - W) seed(i + W);
+          }
+        }
+        const smooth = $("#cu-smooth").checked && tol > 0;
+        for (let i = 0; i < n; i++) {
+          if (isBg[i]) continue;
+          let v = src[i * 4 + 3];
+          if (smooth) {
+            const x = i % W;
+            const edge = (x > 0 && isBg[i - 1]) || (x < W - 1 && isBg[i + 1]) || (i >= W && isBg[i - W]) || (i < n - W && isBg[i + W]);
+            if (edge) {
+              const f = Math.min(1, Math.max(0.3, (Math.sqrt(dist2(i)) - tol) / (tol * 0.6 + 1)));
+              v = Math.round(v * f);
+            }
+          }
+          a[i] = v;
+        }
+      }
+      if (strokes.length) {
+        const e = editCtx.getImageData(0, 0, W, H).data;
+        for (let i = 0, p = 0; i < n; i++, p += 4) {
+          if (e[p + 3] < 128) continue;
+          a[i] = e[p] > e[p + 1] ? 0 : src[p + 3];
+        }
+      }
+      return a;
+    }
+
+    function labelPieces(a, minArea) {
+      const n = W * H, lab = new Int32Array(n), stack = new Int32Array(n), found = [];
+      let id = 0;
+      for (let s = 0; s < n; s++) {
+        if (lab[s] || a[s] < ALPHA_MIN) continue;
+        id++;
+        lab[s] = id;
+        let sp = 0, area = 0, x0 = W, y0 = H, x1 = 0, y1 = 0;
+        stack[sp++] = s;
+        while (sp) {
+          const i = stack[--sp], x = i % W, y = (i - x) / W;
+          area++;
+          if (x < x0) x0 = x;
+          if (x > x1) x1 = x;
+          if (y < y0) y0 = y;
+          if (y > y1) y1 = y;
+          if (x > 0 && !lab[i - 1] && a[i - 1] >= ALPHA_MIN) { lab[i - 1] = id; stack[sp++] = i - 1; }
+          if (x < W - 1 && !lab[i + 1] && a[i + 1] >= ALPHA_MIN) { lab[i + 1] = id; stack[sp++] = i + 1; }
+          if (i >= W && !lab[i - W] && a[i - W] >= ALPHA_MIN) { lab[i - W] = id; stack[sp++] = i - W; }
+          if (i < n - W && !lab[i + W] && a[i + W] >= ALPHA_MIN) { lab[i + W] = id; stack[sp++] = i + W; }
+        }
+        found.push({ id, area, x0, y0, x1, y1 });
+      }
+      let keep = found.filter(c => c.area >= minArea);
+      droppedCount = found.length - keep.length;
+      cappedCount = 0;
+      if (keep.length > MAX_PIECES) {
+        keep.sort((p, q) => q.area - p.area);
+        cappedCount = keep.length - MAX_PIECES;
+        keep = keep.slice(0, MAX_PIECES);
+      }
+      const ok = new Uint8Array(id + 1);
+      keep.forEach(c => { ok[c.id] = 1; });
+      for (let i = 0; i < n; i++) if (lab[i] && !ok[lab[i]]) { lab[i] = 0; a[i] = 0; }
+      return { lab, keep };
+    }
+
+    function newPiece(ids, name) {
+      pieceSeq++;
+      return { key: pieceSeq, comps: ids, name: name || `piece-${pieceSeq}`, include: true, color: PALETTE[(pieceSeq - 1) % PALETTE.length] };
+    }
+    // Keep names, order, merges and ticks across edits by matching new pieces to the old ones they overlap.
+    function rebuildPieces(lab, keep) {
+      const next = new Map(keep.map(c => [c.id, c]));
+      const result = [];
+      if (labels && pieces.length) {
+        const oldPiece = new Map();
+        pieces.forEach((p, pi) => p.comps.forEach(c => oldPiece.set(c, pi)));
+        const pairs = new Map();
+        for (let i = 0; i < lab.length; i++) {
+          const nc = lab[i];
+          if (!nc) continue;
+          const oc = labels[i];
+          if (!oc || !oldPiece.has(oc)) continue;
+          const key = nc * ID_SPAN + oc;
+          pairs.set(key, (pairs.get(key) || 0) + 1);
+        }
+        const bestOld = new Map();
+        pairs.forEach((count, key) => {
+          const nc = Math.floor(key / ID_SPAN), oc = key % ID_SPAN, cur = bestOld.get(nc);
+          if (!cur || count > cur[1]) bestOld.set(nc, [oc, count]);
+        });
+        const byOldComp = new Map();
+        bestOld.forEach(([oc], nc) => { if (!byOldComp.has(oc)) byOldComp.set(oc, []); byOldComp.get(oc).push(nc); });
+        const claimed = new Set(), splitOffs = new Map(), pieceComps = pieces.map(() => []);
+        byOldComp.forEach((ncs, oc) => {
+          ncs.sort((p, q) => next.get(q).area - next.get(p).area);
+          const pi = oldPiece.get(oc);
+          pieceComps[pi].push(ncs[0]);
+          claimed.add(ncs[0]);
+          ncs.slice(1).forEach(extra => {
+            if (!splitOffs.has(pi)) splitOffs.set(pi, []);
+            splitOffs.get(pi).push(extra);
+            claimed.add(extra);
+          });
+        });
+        pieces.forEach((p, pi) => {
+          if (pieceComps[pi].length) { p.comps = pieceComps[pi]; result.push(p); }
+          (splitOffs.get(pi) || []).forEach((nc, k) => result.push(newPiece([nc], `${p.name}-${k + 2}`)));
+        });
+        keep.filter(c => !claimed.has(c.id)).sort((p, q) => p.area - q.area).forEach(c => result.push(newPiece([c.id])));
+      } else {
+        keep.slice().sort((p, q) => p.area - q.area).forEach(c => result.push(newPiece([c.id])));
+      }
+      labels = lab;
+      comps = next;
+      pieces = result;
+    }
+
+    function maxCompId() { let m = 0; comps.forEach((c, id) => { if (id > m) m = id; }); return m; }
+    function bboxOf(p) {
+      let x0 = W, y0 = H, x1 = 0, y1 = 0;
+      p.comps.forEach(id => {
+        const c = comps.get(id);
+        if (!c) return;
+        x0 = Math.min(x0, c.x0); y0 = Math.min(y0, c.y0); x1 = Math.max(x1, c.x1); y1 = Math.max(y1, c.y1);
+      });
+      return { x0, y0, x1, y1 };
+    }
+
+    function render() {
+      if (!src) return;
+      const mode = radio("cu-show");
+      const img = new ImageData(W, H), d = img.data;
+      if (mode === "original") {
+        d.set(src);
+      } else {
+        const look = new Array(maxCompId() + 1);
+        pieces.forEach(p => p.comps.forEach(id => { look[id] = p; }));
+        const tint = mode === "pieces";
+        for (let i = 0, p = 0; i < W * H; i++, p += 4) {
+          const id = labels[i], pc = id ? look[id] : null;
+          if (!pc || !alpha[i]) continue;
+          let r = src[p], g = src[p + 1], b = src[p + 2];
+          if (tint) { r = r * 0.4 + pc.color[0] * 0.6; g = g * 0.4 + pc.color[1] * 0.6; b = b * 0.4 + pc.color[2] * 0.6; }
+          d[p] = r; d[p + 1] = g; d[p + 2] = b;
+          d[p + 3] = pc.include ? alpha[i] : alpha[i] * 0.2;
+        }
+      }
+      view.getContext("2d").putImageData(img, 0, 0);
+    }
+
+    function renderList() {
+      list.replaceChildren(...pieces.map((p, idx) => {
+        const li = document.createElement("li");
+        li.className = "piece";
+        const sw = document.createElement("span");
+        sw.className = "swatch";
+        sw.style.background = `rgb(${p.color.join(",")})`;
+        const inc = document.createElement("input");
+        inc.type = "checkbox";
+        inc.id = "cu-inc-" + p.key;
+        inc.checked = p.include;
+        inc.setAttribute("aria-label", "Include " + p.name);
+        inc.addEventListener("change", () => { p.include = inc.checked; render(); updateButtons(); });
+        const name = document.createElement("input");
+        name.type = "text";
+        name.id = "cu-name-" + p.key;
+        name.value = p.name;
+        name.setAttribute("aria-label", "Piece name");
+        name.addEventListener("input", () => { p.name = name.value; });
+        const bb = bboxOf(p);
+        const meta = document.createElement("span");
+        meta.className = "meta";
+        meta.textContent = `${bb.x1 - bb.x0 + 1}×${bb.y1 - bb.y0 + 1}`;
+        const mk = (label, aria, disabled, fn) => {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "icon-btn";
+          b.textContent = label;
+          b.setAttribute("aria-label", aria);
+          b.disabled = disabled;
+          b.addEventListener("click", fn);
+          return b;
+        };
+        const up = mk("↑", `Move ${p.name} forward`, idx === 0, () => { [pieces[idx - 1], pieces[idx]] = [pieces[idx], pieces[idx - 1]]; renderList(); });
+        const down = mk("↓", `Move ${p.name} back`, idx === pieces.length - 1, () => { [pieces[idx + 1], pieces[idx]] = [pieces[idx], pieces[idx + 1]]; renderList(); });
+        const merge = mk("Merge ↑", `Merge ${p.name} into the piece above`, idx === 0, () => {
+          pieces[idx - 1].comps = pieces[idx - 1].comps.concat(p.comps);
+          pieces.splice(idx, 1);
+          render();
+          renderList();
+          updateInfo();
+        });
+        li.append(sw, inc, name, meta, up, down, merge);
+        return li;
+      }));
+    }
+
+    function updateButtons() {
+      const any = pieces.some(p => p.include);
+      $("#cu-zip").disabled = !any;
+      $("#cu-png").disabled = !any;
+      $("#cu-undo").disabled = !strokes.length;
+      $("#cu-clear").disabled = !strokes.length;
+    }
+    function updateInfo() {
+      info.textContent = `${W} × ${H} px · ${pieces.length} ${pieces.length === 1 ? "piece" : "pieces"}` + (droppedCount ? ` · ${droppedCount} small ${droppedCount === 1 ? "bit" : "bits"} ignored` : "");
+      const items = [];
+      if (scaledFrom) items.push({ text: `Scaled down from ${scaledFrom} to ${W} × ${H} px to keep editing quick.`, info: true });
+      if (!pieces.length) items.push("Nothing is left after removing the background. Lower the tolerance, or choose Already transparent.");
+      else if (pieces.length === 1) items.push({ text: "Only one piece found. Parts that touch stay together. Choose Cut line and draw between them to split them.", info: true });
+      if (cappedCount) items.push(`Only the ${MAX_PIECES} biggest pieces are kept. Raise "Ignore bits smaller than" to drop the rest.`);
+      renderNotes(notes, items);
+      updateButtons();
+    }
+
+    function recompute() {
+      if (!src) return;
+      const keep = radio("cu-bg") === "keep";
+      $("#cu-bg-options").hidden = keep;
+      $("#cu-bg-checks").hidden = keep;
+      $("#cu-bg-hint").hidden = keep;
+      $("#cu-tol-out").textContent = $("#cu-tol").value;
+      $("#cu-bg-swatch").style.background = hex(bg);
+      $("#cu-bg-hex").textContent = hex(bg);
+      const share = Number($("#cu-min").value) / 100;
+      const minArea = Math.max(4, Math.round(W * H * share / 100));
+      $("#cu-min-out").textContent = `${share.toFixed(2)}% · ${minArea.toLocaleString()} px`;
+      alpha = computeAlpha();
+      const r = labelPieces(alpha, minArea);
+      rebuildPieces(r.lab, r.keep);
+      render();
+      renderList();
+      updateInfo();
+    }
+    const recomputeSoon = debounce(recompute, 140);
+
+    function sizeView() {
+      if (W && H) view.style.width = `min(100%, ${Math.round(540 * W / H)}px)`;
+    }
+    function loadFrom(drawable, w, h, name) {
+      const scale = Math.min(1, MAX_SIDE / Math.max(w, h));
+      W = Math.max(1, Math.round(w * scale));
+      H = Math.max(1, Math.round(h * scale));
+      scaledFrom = scale < 1 ? `${w} × ${h}` : "";
+      const c = document.createElement("canvas");
+      c.width = W;
+      c.height = H;
+      const ctx = c.getContext("2d", { willReadFrequently: true });
+      ctx.drawImage(drawable, 0, 0, W, H);
+      src = ctx.getImageData(0, 0, W, H).data;
+      view.width = W;
+      view.height = H;
+      editCanvas.width = W;
+      editCanvas.height = H;
+      editCtx = editCanvas.getContext("2d", { willReadFrequently: true });
+      strokes = [];
+      pieces = [];
+      labels = null;
+      pieceSeq = 0;
+      sourceName = name;
+      if (transparentBorderShare() > 0.3) $("#cu-bg-keep").checked = true;
+      else $("#cu-bg-remove").checked = true;
+      bg = detectBackground();
+      sizeView();
+      recompute();
+    }
+    async function loadFile(f) {
+      if (!f) return;
+      if (!/^image\/(png|jpeg|webp)$/.test(f.type)) { toast("Choose a PNG, JPG or WebP picture."); return; }
+      if (f.size > 20 * 1048576) { toast("That picture is over 20 MB. Choose a smaller one."); return; }
+      try {
+        const bmp = await createImageBitmap(f);
+        loadFrom(bmp, bmp.width, bmp.height, f.name.replace(/\.[^.]+$/, ""));
+        $("#cu-file-hint").textContent = `${f.name} · ${formatBytes(f.size)}`;
+      } catch (e) {
+        toast("That file couldn't be read as a picture.");
+      }
+    }
+
+    const toImage = e => {
+      const r = view.getBoundingClientRect();
+      return [(e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height];
+    };
+    function paintStroke(g, s) {
+      const col = s.tool === "restore" ? "rgb(0,255,0)" : "rgb(255,0,0)";
+      g.save();
+      g.lineCap = "round";
+      g.lineJoin = "round";
+      g.lineWidth = s.size;
+      g.strokeStyle = col;
+      g.fillStyle = col;
+      g.beginPath();
+      if (s.pts.length === 1) {
+        g.arc(s.pts[0][0], s.pts[0][1], s.size / 2, 0, Math.PI * 2);
+        g.fill();
+      } else {
+        g.moveTo(s.pts[0][0], s.pts[0][1]);
+        s.pts.slice(1).forEach(pt => g.lineTo(pt[0], pt[1]));
+        g.stroke();
+      }
+      g.restore();
+    }
+    function liveSegment(a, b, s) {
+      const g = view.getContext("2d");
+      g.save();
+      g.lineCap = "round";
+      g.lineWidth = s.size;
+      g.strokeStyle = s.tool === "restore" ? "rgba(27,160,90,0.75)" : s.tool === "cut" ? "rgba(20,20,20,0.9)" : "rgba(220,40,40,0.75)";
+      g.beginPath();
+      g.moveTo(a[0], a[1]);
+      g.lineTo(b[0], b[1]);
+      g.stroke();
+      g.restore();
+    }
+    function replayEdits() {
+      editCtx.clearRect(0, 0, W, H);
+      strokes.forEach(s => paintStroke(editCtx, s));
+    }
+
+    view.addEventListener("pointerdown", e => {
+      if (!src) return;
+      if (picking) {
+        const [x, y] = toImage(e);
+        const p = (Math.min(H - 1, Math.max(0, Math.floor(y))) * W + Math.min(W - 1, Math.max(0, Math.floor(x)))) * 4;
+        bg = [src[p], src[p + 1], src[p + 2]];
+        picking = false;
+        view.style.cursor = "";
+        $("#cu-bg-remove").checked = true;
+        toast("Background color set to " + hex(bg));
+        recompute();
+        return;
+      }
+      const tool = radio("cu-tool");
+      if (tool === "view") return;
+      e.preventDefault();
+      view.setPointerCapture(e.pointerId);
+      const k = W / view.getBoundingClientRect().width;
+      const size = tool === "cut" ? Math.max(3, Math.round(3 * k)) : Math.max(1, Number($("#cu-brush").value) * k);
+      active = { tool, size, pts: [toImage(e)] };
+      liveSegment(active.pts[0], active.pts[0], active);
+    });
+    view.addEventListener("pointermove", e => {
+      if (!active) return;
+      const pt = toImage(e), prev = active.pts[active.pts.length - 1];
+      active.pts.push(pt);
+      liveSegment(prev, pt, active);
+    });
+    const finish = () => {
+      if (!active) return;
+      strokes.push(active);
+      paintStroke(editCtx, active);
+      active = null;
+      recompute();
+    };
+    view.addEventListener("pointerup", finish);
+    view.addEventListener("pointercancel", finish);
+
+    $("#cu-file").addEventListener("change", e => loadFile(e.target.files && e.target.files[0]));
+    stage.addEventListener("dragover", e => e.preventDefault());
+    stage.addEventListener("drop", e => { e.preventDefault(); loadFile(e.dataTransfer.files && e.dataTransfer.files[0]); });
+    $$('input[name="cu-bg"]').forEach(r => r.addEventListener("change", recompute));
+    ["#cu-tol", "#cu-min"].forEach(s => $(s).addEventListener("input", () => {
+      $("#cu-tol-out").textContent = $("#cu-tol").value;
+      recomputeSoon();
+    }));
+    ["#cu-global", "#cu-smooth"].forEach(s => $(s).addEventListener("change", recompute));
+    $$('input[name="cu-show"]').forEach(r => r.addEventListener("change", render));
+    $$('input[name="cu-tool"]').forEach(r => r.addEventListener("change", () => {
+      view.style.touchAction = radio("cu-tool") === "view" ? "auto" : "none";
+    }));
+    $("#cu-brush").addEventListener("input", () => { $("#cu-brush-out").textContent = $("#cu-brush").value + " px"; });
+    $("#cu-pick").addEventListener("click", () => {
+      picking = true;
+      view.style.cursor = "copy";
+      toast("Click the background in the preview.");
+    });
+    $("#cu-undo").addEventListener("click", () => { strokes.pop(); replayEdits(); recompute(); });
+    $("#cu-clear").addEventListener("click", () => { strokes = []; replayEdits(); recompute(); });
+
+    async function piecePng(memberIds, crop) {
+      const member = new Uint8Array(maxCompId() + 1);
+      memberIds.forEach(id => { member[id] = 1; });
+      const bb = bboxOf({ comps: memberIds }), pad = 2;
+      const x0 = crop ? Math.max(0, bb.x0 - pad) : 0, y0 = crop ? Math.max(0, bb.y0 - pad) : 0;
+      const x1 = crop ? Math.min(W - 1, bb.x1 + pad) : W - 1, y1 = crop ? Math.min(H - 1, bb.y1 + pad) : H - 1;
+      const w = x1 - x0 + 1, h = y1 - y0 + 1;
+      const img = new ImageData(w, h), d = img.data;
+      for (let y = y0; y <= y1; y++) {
+        for (let x = x0; x <= x1; x++) {
+          const i = y * W + x;
+          if (!member[labels[i]]) continue;
+          const p = i * 4, q = ((y - y0) * w + (x - x0)) * 4;
+          d[q] = src[p]; d[q + 1] = src[p + 1]; d[q + 2] = src[p + 2]; d[q + 3] = alpha[i];
+        }
+      }
+      const c = document.createElement("canvas");
+      c.width = w;
+      c.height = h;
+      c.getContext("2d").putImageData(img, 0, 0);
+      return { blob: await canvasBlob(c, "image/png"), x: x0, y: y0, width: w, height: h };
+    }
+
+    const CRC_TABLE = (() => {
+      const t = new Uint32Array(256);
+      for (let n = 0; n < 256; n++) {
+        let c = n;
+        for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+        t[n] = c >>> 0;
+      }
+      return t;
+    })();
+    function crc32(u8) {
+      let c = 0xffffffff;
+      for (let i = 0; i < u8.length; i++) c = CRC_TABLE[(c ^ u8[i]) & 255] ^ (c >>> 8);
+      return (c ^ 0xffffffff) >>> 0;
+    }
+    // A plain "stored" ZIP: PNGs are already compressed, so no deflate is needed.
+    function makeZip(files) {
+      const now = new Date();
+      const time = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+      const date = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+      const parts = [], central = [];
+      let offset = 0;
+      for (const f of files) {
+        const name = utf8(f.name), data = f.data, crc = crc32(data);
+        const lh = new DataView(new ArrayBuffer(30));
+        lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+        lh.setUint16(10, time, true); lh.setUint16(12, date, true); lh.setUint32(14, crc, true);
+        lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true); lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+        parts.push(new Uint8Array(lh.buffer), name, data);
+        const ch = new DataView(new ArrayBuffer(46));
+        ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
+        ch.setUint16(12, time, true); ch.setUint16(14, date, true); ch.setUint32(16, crc, true);
+        ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true); ch.setUint16(28, name.length, true);
+        ch.setUint16(30, 0, true); ch.setUint16(32, 0, true); ch.setUint16(34, 0, true); ch.setUint16(36, 0, true); ch.setUint32(38, 0, true);
+        ch.setUint32(42, offset, true);
+        central.push(new Uint8Array(ch.buffer), name);
+        offset += 30 + name.length + data.length;
+      }
+      const cdSize = central.reduce((s, p) => s + p.length, 0);
+      const end = new DataView(new ArrayBuffer(22));
+      end.setUint32(0, 0x06054b50, true); end.setUint16(4, 0, true); end.setUint16(6, 0, true);
+      end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+      end.setUint32(12, cdSize, true); end.setUint32(16, offset, true); end.setUint16(20, 0, true);
+      return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: "application/zip" });
+    }
+    function howTo(layers, crop) {
+      const lines = [
+        `Cut-out layers from "${sourceName}"`,
+        `Picture: ${W} x ${H} px. ${layers.length} ${layers.length === 1 ? "piece" : "pieces"}, numbered from the back (01 is the bottom layer).`,
+        "",
+        "Using them in Alight Motion or another layered editor",
+        `1. Start a project with the same shape as the picture (${W} x ${H}, or the same ratio).`,
+        "2. Add 01 as an image layer first, then add each next number on top of it.",
+        crop
+          ? "3. Each PNG is cropped to its piece. Place each one at the x and y listed below, in pixels from the top-left corner of the picture."
+          : "3. Every PNG is the full picture size, so if every layer gets the same size and position, the pieces line up exactly.",
+        "4. Before you animate a piece, move its pivot (anchor point) to where it should bend, such as the shoulder of an arm.",
+        "",
+        "Pieces (x and y are the top-left corner):"
+      ];
+      layers.forEach(l => lines.push(`${l.file}   ${l.width} x ${l.height} px at x ${l.x}, y ${l.y}`));
+      return lines.join("\n") + "\n";
+    }
+
+    $("#cu-zip").addEventListener("click", async () => {
+      const inc = pieces.filter(p => p.include);
+      if (!inc.length) return;
+      const btn = $("#cu-zip");
+      btn.disabled = true;
+      btn.textContent = "Packing…";
+      try {
+        const crop = radio("cu-size") === "crop";
+        const back = inc.slice().reverse();
+        const used = new Set(), files = [], layers = [];
+        for (let k = 0; k < back.length; k++) {
+          const p = back[k];
+          const r = await piecePng(p.comps, crop);
+          const base = `${String(k + 1).padStart(2, "0")}-${slug(p.name) || "piece"}`;
+          let name = base + ".png", n = 2;
+          while (used.has(name)) name = `${base}-${n++}.png`;
+          used.add(name);
+          files.push({ name, data: new Uint8Array(await r.blob.arrayBuffer()) });
+          layers.push({ order: k + 1, name: p.name, file: name, x: r.x, y: r.y, width: r.width, height: r.height });
+        }
+        const manifest = { source: sourceName, picture: { width: W, height: H }, pngs: crop ? "cropped to each piece" : "full picture size", order: "1 is the back layer", layers };
+        files.push({ name: "layers.json", data: utf8(JSON.stringify(manifest, null, 2) + "\n") });
+        files.push({ name: "HOW-TO.txt", data: utf8(howTo(layers, crop)) });
+        await saveFile(`${slug(sourceName) || "cutout"}-layers.zip`, makeZip(files));
+      } catch (e) {
+        toast("Packing the ZIP failed. Try again, or use a smaller picture.");
+      } finally {
+        btn.textContent = "Download ZIP";
+        updateButtons();
+      }
+    });
+    $("#cu-png").addEventListener("click", async () => {
+      const ids = pieces.filter(p => p.include).flatMap(p => p.comps);
+      if (!ids.length) return;
+      const r = await piecePng(ids, false);
+      saveFile(`${slug(sourceName) || "cutout"}-cutout.png`, r.blob);
+    });
+
+    onShow.cutout = () => { sizeView(); render(); };
+    loadFrom(sampleCharacter(), 900, 900, "sample-character");
   })();
 
   /* ---------- Prompt writer (AI) ---------- */
